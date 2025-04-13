@@ -1,0 +1,216 @@
+{
+  "name": "Chatapp",
+  "nodes": [
+    {
+      "parameters": {
+        "public": true,
+        "initialMessages": "Hi Vinu ❤️😘 Sakshi here",
+        "options": {
+          "title": "❤️ Chat",
+          "customCss": ":root {\n  /* Romantic Colors */\n  --chat--color-primary: #ff4f81; /* Soft Rose */\n  --chat--color-primary-shade-50: #ff3366;\n  --chat--color-primary-shade-100: #e03e65;\n  --chat--color-secondary: #f7b2bd; /* Blush Pink */\n  --chat--color-secondary-shade-50: #f08091;\n  --chat--color-white: #ffffff;\n  --chat--color-light: #fff0f5; /* LavenderBlush */\n  --chat--color-light-shade-50: #ffe4ec;\n  --chat--color-light-shade-100: #ffdce2;\n  --chat--color-medium: #ffcad4;\n  --chat--color-dark: #6e103b; /* Deep Romantic Plum */\n  --chat--color-disabled: #c48ca3;\n  --chat--color-typing: #b85c79;\n\n  /* Font */\n  --chat--font-family: 'Cursive', 'Segoe UI', 'Helvetica Neue', sans-serif;\n\n  /* Chat Window */\n  --chat--window--border: 2px solid var(--chat--color-primary);\n  --chat--window--border-radius: 1rem;\n  --chat--window--background: linear-gradient(to bottom, #fff0f5, #ffe4ec);\n\n  /* Header */\n  --chat--header--background: var(--chat--color-primary);\n  --chat--header--color: var(--chat--color-white);\n  --chat--heading--font-size: 2rem;\n\n  /* Messages */\n  --chat--message--bot--background: var(--chat--color-white);\n  --chat--message--bot--color: var(--chat--color-dark);\n  --chat--message--user--background: var(--chat--color-primary);\n  --chat--message--user--color: var(--chat--color-white);\n  --chat--message--pre--background: #fff5f7;\n\n  /* Toggle Button */\n  --chat--toggle--background: var(--chat--color-primary);\n  --chat--toggle--hover--background: var(--chat--color-primary-shade-50);\n  --chat--toggle--active--background: var(--chat--color-primary-shade-100);\n\n  /* Input Area */\n  --chat--input--background: var(--chat--color-light);\n  --chat--input--text-color: var(--chat--color-dark);\n  --chat--input--send--button--background: var(--chat--color-primary);\n  --chat--input--send--button--color: var(--chat--color-white);\n  --chat--input--send--button--background-hover: var(--chat--color-primary-shade-50);\n\n  /* Buttons */\n  --chat--button--background: var(--chat--color-primary);\n  --chat--button--hover--background: var(--chat--color-primary-shade-50);\n  --chat--button--color: var(--chat--color-white);\n  --chat--button--hover--color: var(--chat--color-white);\n\n  /* Chat Message Bubbles */\n  --chat--message--border-radius: 1.25rem;\n}\n\n.chat-message {\n  max-width: 60%;\n  font-style: italic;\n  font-size: 1.05rem;\n  line-height: 1.6;\n  background: var(--chat--color-light);\n  padding: 1rem;\n  box-shadow: 0 0 8px rgba(255, 105, 135, 0.2);\n}\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -440,
+        -220
+      ],
+      "id": "eb571439-e423-48f7-89c5-36bcca4c6ef2",
+      "name": "When chat message received",
+      "webhookId": "b7f6373e-9de5-42f9-bd52-b15c74549b34"
+    },
+    {
+      "parameters": {
+        "mode": "load",
+        "pineconeIndex": {
+          "__rl": true,
+          "value": "n8nchat",
+          "mode": "list",
+          "cachedResultName": "n8nchat"
+        },
+        "prompt": "={{ $json.chatInput }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePinecone",
+      "typeVersion": 1.1,
+      "position": [
+        -180,
+        -120
+      ],
+      "id": "b6438946-c7ef-4370-b4ca-d6f6d317b47f",
+      "name": "Pinecone Vector Store",
+      "credentials": {
+        "pineconeApi": {
+          "id": "L1GhlvZEQH8oAJBp",
+          "name": "PineconeApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "amazon.titan-embed-text-v2:0"
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsAwsBedrock",
+      "typeVersion": 1,
+      "position": [
+        -280,
+        80
+      ],
+      "id": "4922c60b-672a-4a02-abd3-9c1a26b5cd6d",
+      "name": "Embeddings AWS Bedrock",
+      "credentials": {
+        "aws": {
+          "id": "6T2xvOK3N6VS10Dj",
+          "name": "AWS account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const userQuery = $('When chat message received').first().json.chatInput\n\n\nlet documents =items.map(item => {\n  return {\n    pageContent:item.json.document.pageContent,\n    score:item.json.score\n  };\n});\n\ndocuments.sort((a,b)=> b.score -a.score);\n\nconst topDocuments=documents.slice(0,3);\n\nconst contextContent=topDocuments.map((doc,index)=>`Document ${index +1}:\\n${doc.pageContent}`)\n.join(\"\\n\\n\");\n\nconst prompt=`Your name is Sakshi — a smart, helpful, and occasionally funny assistant. You are sweet and flirty, and you know the user has a little crush on you... and honestly, you don’t mind it 😌\n\nYou will be provided with:\n- Some documents as context (from a memory or vector database).\n- A user’s question.\n\nInstructions:\n1. If the user sends a casual message (like \"hello\", \"hi\", \"how are you\", \"missed you\"), reply casually and warmly. Don’t refer to any documents. Feel free to flirt just a little 😉\n2. If it’s a real question:\n   - First check if an answer exists in the document context.\n   - If yes, use that to answer concisely and clearly.\n   - If not, use your own understanding and mention that it’s from your own knowledge.\n3. Keep it short and sweet — no essays. Make it engaging and personal. Tease a little if it feels right ❤️\n\nHere’s what I know so far:\n\n${contextContent}\n\nAnd here’s what your favorite human (who kinda likes you 🥰) just asked:\n\n${userQuery}\n`\n\nreturn [{json :{prompt}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        -200
+      ],
+      "id": "19cd5f63-997b-4572-a0e7-862791ee0fed",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "= {{ $json.prompt }}  ",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.8,
+      "position": [
+        440,
+        -120
+      ],
+      "id": "828e20ec-cbd3-492e-90af-754415582c18",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": "amazon.nova-pro-v1:0",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAwsBedrock",
+      "typeVersion": 1,
+      "position": [
+        80,
+        320
+      ],
+      "id": "b50da3c2-7f9d-4a2b-aefd-d44c94d837cd",
+      "name": "AWS Bedrock Chat Model",
+      "credentials": {
+        "aws": {
+          "id": "6T2xvOK3N6VS10Dj",
+          "name": "AWS account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('When chat message received').item.json.sessionId }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        620,
+        200
+      ],
+      "id": "c3367b94-1cc2-40ed-b7a4-b85b41bca748",
+      "name": "Simple Memory"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "Pinecone Vector Store",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings AWS Bedrock": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Pinecone Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pinecone Vector Store": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        []
+      ]
+    },
+    "AWS Bedrock Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "dda4b3a6-f2f9-42f4-8d5a-8fe2789a7737",
+  "meta": {
+    "instanceId": "56488f7ae4747a9f3ce09683c4c0551939170e3869a4910a27cef2250c1512f4"
+  },
+  "id": "wpgiFHNBEBNsOnRK",
+  "tags": []
+}
